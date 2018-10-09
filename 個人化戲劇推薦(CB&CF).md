@@ -202,29 +202,30 @@ CB['G010166'] #根據CB演算法，使用者對G010075(dramaID)的可能評分
 
 
 ```python
-def movie_users_inverse_table(data):
+def drama_users_inverse_table(data):
 
     # build inverse table for item-users
-    # key=movieID, value=list of userIDs who have seen this movie
+    # key=dramaID, value=list of userID who have seen this drama
 
-    movie_users = dict()
-    movie_popular = dict()
+    drama_users = {}
+    drama_popular = {}
 
-    for user, movies in data.items():
-        for movie in movies:
+    for user, dramas in data.items():
+        for drama in dramas:
 
             # inverse table for item-users
-            if movie not in movie_users:
-                movie_users[movie] = set()
-            movie_users[movie].add(user)
+            if drama not in drama_users:
+                drama_users[drama] = set()
+            drama_users[drama].add(user)
 
             # count item popularity at the same time
-            if movie not in movie_popular:
-                movie_popular[movie] = 0
-            movie_popular[movie] += 1
-    print ('build movie-users inverse table succ', file=sys.stderr)
+            if drama not in drama_popular:
+                drama_popular[drama] = 0
+            drama_popular[drama] += 1
+            
+    print ('build drama_users_inverse_table successfully', file=sys.stderr)
 
-    return movie_users, movie_popular
+    return drama_users, drama_popular
 ```
 
 ### 3.2計算使用者共同收藏的戲劇個數
@@ -235,18 +236,20 @@ def count_corated_items():
     
     # count co-rated items between users
     # key=userID value=dict of otherUserID with count of co-rated items
-    movie_users, movie_popular = movie_users_inverse_table(data)
     
-    users_corated_count=dict()
+    drama_users, drama_popular = drama_users_inverse_table(data)
+    
+    users_corated_count={}
 
-    for movie, users in movie_users.items():
+    for drama, users in drama_users.items():
         for u in users:
             users_corated_count.setdefault(u, defaultdict(int))
             for v in users:
                 if u == v:
                     continue
                 users_corated_count[u][v] += 1
-    print ('build user co-rated movies matrix succ', file=sys.stderr)
+                
+    print ('build user co_rated_dramas_matrix successfully', file=sys.stderr)
 
     return users_corated_count
 ```
@@ -261,24 +264,18 @@ def similarity_matrix(data):
     
     users_corated_count = count_corated_items()
 
-    simMatrix=dict()
-
-    simfactor_count = 0
-    PRINT_STEP = 2000000
+    similarMatrix={}
+    similarfactor_num = 0
 
     for u, related_users in users_corated_count.items():
-        simMatrix.setdefault(u, defaultdict(int))
+        similarMatrix.setdefault(u, defaultdict(int))
         for v, count in related_users.items():
-            simMatrix[u][v] = count / math.sqrt(
-                len(data[u]) * len(data[v]))
-            simfactor_count += 1
-            if simfactor_count % PRINT_STEP == 0:
-                print ('calculating user similarity factor(%d)' % simfactor_count, file=sys.stderr)
+            similarMatrix[u][v] = count / math.sqrt(len(data[u]) * len(data[v]))
+            similarfactor_num += 1
 
-    print ('calculate user similarity matrix(similarity factor) succ', file=sys.stderr)
-    print ('Total similarity factor number = %d' % simfactor_count, file=sys.stderr)
+    print ('Total similarity factor number = %d' % similarfactor_num, file=sys.stderr)
 
-    return simMatrix
+    return similarMatrix
 ```
 
 ### 3.4 針對特定使用者，找出喜好最相近的前20人，計算其對每個戲劇的喜好程度
@@ -287,20 +284,20 @@ def similarity_matrix(data):
 ```python
 def recommend_CF_userBased(user_ip, data):
     
-    simMatrix = similarity_matrix(data)
+    similarMatrix = similarity_matrix(data)
     
-    simMatrix_list=list(simMatrix[user_ip].items())
-    simMatrix_list.sort(key=lambda x: (x[1], x[0]), reverse=True)
-    watched_movies = data[user_ip]
+    similarMatrix_list=list(similarMatrix[user_ip].items())
+    similarMatrix_list.sort(key=lambda x: (x[1], x[0]), reverse=True)
+    watched_dramas = data[user_ip]
     
     rank_CF=dict()
-    for i in simMatrix_list[0:20]:
-        for movie in data[i[0]]:
-            if movie in watched_movies:
+    for i in similarMatrix_list[0:20]:
+        for drama in data[i[0]]:
+            if drama in watched_dramas:
                 continue
-            if movie not in rank_CF:
-                rank_CF.setdefault(movie, 0)
-            rank_CF[movie] += i[1]
+            if drama not in rank_CF:
+                rank_CF.setdefault(drama, 0)
+            rank_CF[drama] += i[1]
 
     rank_sorted_CF=sorted(rank_CF.items(), key=itemgetter(1), reverse=True)
 
@@ -324,12 +321,8 @@ for i in grade_CF:
 CF['G010166'] #根據CF演算法，使用者對G010075(dramaID)的可能評分
 ```
 
-    build movie-users inverse table succ
-    build user co-rated movies matrix succ
-    calculating user similarity factor(2000000)
-    calculating user similarity factor(4000000)
-    calculating user similarity factor(6000000)
-    calculate user similarity matrix(similarity factor) succ
+    build drama_users_inverse_table successfully
+    build user co_rated_dramas_matrix successfully
     Total similarity factor number = 7199428
     
 
@@ -346,25 +339,24 @@ CF['G010166'] #根據CF演算法，使用者對G010075(dramaID)的可能評分
 
 
 ```python
-def calc_movie_popular(data):
+def calc_drama_popular(data):
     
-    movie_popular={}
-    movie_count=0
+    drama_popular={}
+    drama_count=0
     
-    # count movie popularity
-    for user, movies in data.items():
-        for movie in movies:
-            if movie not in movie_popular:
-                movie_popular[movie] = 0
-            movie_popular[movie] += 1
+    # count drama popularity
+    for user, dramas in data.items():
+        for drama in dramas:
+            if drama not in drama_popular:
+                drama_popular[drama] = 0
+            drama_popular[drama] += 1
 
-    print('count movies number and popularity succ', file=sys.stderr)
+    print('count dramas number and popularity successfully', file=sys.stderr)
 
-    # save the total number of movies
-    movie_count = len(movie_popular)
-#     print('total movie number = %d' % movie_count, file=sys.stderr)
+    # save the total number of dramas
+    drama_count = len(drama_popular)
     
-    return movie_popular, movie_count
+    return drama_popular, drama_count
 ```
 
 ### 4.2 計算戲劇共同被相同使用者觀看的次數
@@ -374,19 +366,19 @@ def calc_movie_popular(data):
 def count_corated_users(data):
 
     # count co-rated users between items
-    # key=movieID value=dict of otherMovieID with count of co-rated users
+    # key=dramaID value=dict of otherDramaID with count of co-rated users
     
     items_coratedUser_count = {}
 
-    for user, movies in data.items():
-        for m1 in movies:
-            items_coratedUser_count.setdefault(m1, defaultdict(int))
-            for m2 in movies:
-                if m1 == m2:
+    for user, dramas in data.items():
+        for d1 in dramas:
+            items_coratedUser_count.setdefault(d1, defaultdict(int))
+            for d2 in dramas:
+                if d1 == d2:
                     continue
-                items_coratedUser_count[m1][m2] += 1
+                items_coratedUser_count[d1][d2] += 1
 
-    print('build item co-rated users matrix succ', file=sys.stderr)
+    print('build item co_rated_users_matrix successfully', file=sys.stderr)
     
     return items_coratedUser_count
 ```
@@ -399,26 +391,22 @@ def similarity_matrix_I():
     
     # calculate similarity matrix
     
-    movie_popular, movie_count=calc_movie_popular(data)
+    drama_popular, drama_count=calc_drama_popular(data)
     items_coratedUser_count=count_corated_users(data)
     
-    simMatrix_I={}
+    similarMatrix_I={}
     
-    simfactor_count = 0
-    PRINT_STEP = 10000000
+    similarfactor_num = 0
 
-    for m1, related_movies in items_coratedUser_count.items():
-        simMatrix_I.setdefault(m1, defaultdict(int))
-        for m2, count in related_movies.items():
-            simMatrix_I[m1][m2] = count / math.sqrt(movie_popular[m1] * movie_popular[m2])
-            simfactor_count += 1
-            if simfactor_count % PRINT_STEP == 0:
-                print('calculating movie similarity factor(%d)' % simfactor_count, file=sys.stderr)
+    for d1, related_dramas in items_coratedUser_count.items():
+        similarMatrix_I.setdefault(d1, defaultdict(int))
+        for d2, count in related_dramas.items():
+            similarMatrix_I[d1][d2] = count / math.sqrt(drama_popular[d1] * drama_popular[d2])
+            similarfactor_num += 1
 
-    print('calculate movie similarity matrix(similarity factor) succ', file=sys.stderr)
-#     print('Total similarity factor number = %d' % simfactor_count, file=sys.stderr)
-    
-    return simMatrix_I
+    print('calculate drama similarity matrix(similarity factor) successfully', file=sys.stderr)
+
+    return similarMatrix_I
 ```
 
 ### 4.4 針對特定戲劇，找出最相近的前20部戲劇，計算使用者對每部戲劇的喜好程度
@@ -427,18 +415,18 @@ def similarity_matrix_I():
 ```python
 def recommend_CF_itemBased(user, data):
     
-    simMatrix_I=similarity_matrix_I()
+    similarMatrix_I=similarity_matrix_I()
     
     rank_I = {}
-    watched_movies = data[user]
+    watched_dramas = data[user]
 
-    for movie, rating in watched_movies.items():
-        for related_movie, similarity_factor in sorted(simMatrix_I[movie].items(),key=itemgetter(1), reverse=True)[:20]:
-            if related_movie in watched_movies:
+    for drama, rating in watched_dramas.items():
+        for related_drama, similarity_factor in sorted(similarMatrix_I[drama].items(),key=itemgetter(1), reverse=True)[:20]:
+            if related_drama in watched_dramas:
                 continue
-            rank_I.setdefault(related_movie, 0)
-            rank_I[related_movie] += similarity_factor
-    # return the N best movies
+            rank_I.setdefault(related_drama, 0)
+            rank_I[related_drama] += similarity_factor
+            
     return sorted(rank_I.items(), key=itemgetter(1), reverse=True)
 ```
 
@@ -459,9 +447,9 @@ for i in grade_CF_I:
 CF_I['G010166'] #根據CF演算法，使用者對G010075(dramaID)的可能評分
 ```
 
-    count movies number and popularity succ
-    build item co-rated users matrix succ
-    calculate movie similarity matrix(similarity factor) succ
+    count dramas number and popularity successfully
+    build item co_rated_users_matrix successfully
+    calculate drama similarity matrix(similarity factor) successfully
     
 
 
@@ -526,9 +514,9 @@ r_mix_dic_sorted[0:10]
      ('G010162', 0.6882112859634918),
      ('G030140', 0.6862768429493377),
      ('G010136', 0.6852),
-     ('G010025', 0.6675),
      ('G010109', 0.6675),
      ('G010103', 0.6675),
+     ('G010025', 0.6675),
      ('G010264', 0.6634),
      ('G030092', 0.6592865978039979)]
 

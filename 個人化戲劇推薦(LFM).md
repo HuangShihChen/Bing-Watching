@@ -104,9 +104,7 @@ UserItemDict, UserItemDictPositiveGrade, UserItemDictGrade, dramaName_list, dram
 
 ```python
 def initParams(k):
-    """
-    k: 隱特徵個數
-    """
+    
     p = np.random.rand(len(UserItemDictGrade.keys()), k)
     q = np.random.rand(k, len(dramaName_list2))
     userItem = UserItemDictGrade
@@ -150,15 +148,14 @@ def train(k, iteration_counts, learning_rate, c):
     p, q, userItem=initParams(k)
     
     for step in range(1, iteration_counts+1):
-        for user_ip, samples in userItem.items():
-            for dramaID, r in samples.items():
+        for user_ip, dramas in userItem.items():
+            for dramaID, r in dramas.items():
                 loss = float(r) - predict(p, q, user_ip, dramaID)
                 for kk in range(0, k):
-#                     print('step %d openid %s class %d loss %f' % (step, user_ip, kk, np.abs(loss)))
                     p[kk][user_ip] += learning_rate * (loss * q[dramaID][kk] - c * p[kk][user_ip])
                     q[dramaID][kk] += learning_rate * (loss * p[kk][user_ip] - c * q[dramaID][kk])
         if step % 5 == 0:
-            learning_rate *= 0.9
+            learning_rate *= 0.8
     return p, q
 ```
 
